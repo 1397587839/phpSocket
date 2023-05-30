@@ -15,16 +15,21 @@ try {
         echo "有客户端连接了\n";
     });
 
-    // 1. 注册事件
+    // 注册事件
     $server->on("receive", function (\Te\Server $server, $msg, \Te\TcpConnection $connection) {
         echo "recv from client: " . $msg . "\n";
 
-        // 7(最终). 将响应改到这里
+        // 将响应改到这里
         $connection->write2socket('i am server');
     });
 
-    $server->BindAndListen();
-    $server->EventLoop();
+    // 关闭事件
+    $server->on("close", function (\Te\Server $server, $msg, \Te\TcpConnection $connection) {
+        echo "客户端断开连接了" . "\n";
+    });
+
+    // 简化入口文件代码，将listen和event代码放入service的方法中
+    $server->Start();
 } catch (Exception $e) {
     echo $e->getMessage();
 }
