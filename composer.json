@@ -1,0 +1,21 @@
+{
+    "name": "socket/te",
+    "description": "The socket library",
+    "type": "library",
+    "require": {
+        "php": ">7.1"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Te\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "wangbo",
+            "email": "1397587839@qq.com"
+        }
+    ],
+    "minimum-stability": "dev"
+}
