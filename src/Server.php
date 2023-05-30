@@ -89,7 +89,7 @@ class Server
     }
 
     // 6. 改函数参数（调用地方都要改到）
-    public function runEventCallBak($eventName, $args = [])
+    public function runEventCallBack($eventName, $args = [])
     {
         if (isset($this->_events[$eventName]) && is_callable($this->_events[$eventName])) {
             // 直接执行，因为是匿名函数可以直接调用，将当前对象传过去
@@ -114,6 +114,6 @@ class Server
 
         // 4. 将这里拆分出一个方法
         // 6. 改入参
-        $this->runEventCallBak('connect', [$connection]);
+        $this->runEventCallBack('connect', [$connection]);
     }
 }

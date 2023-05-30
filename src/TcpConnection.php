@@ -33,7 +33,7 @@ class TcpConnection
             // 5.
             /** @var Server $server */
             $server = $this->_server;
-            $server->runEventCallBak('receive', [$data, $this]);
+            $server->runEventCallBack('receive', [$data, $this]);
         }
     }
 
