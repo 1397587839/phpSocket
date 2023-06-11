@@ -9,7 +9,8 @@ require_once "vendor/autoload.php";
 // mqtt connect/subscribe/unsubscribe/publish/close
 
 try {
-    $server = new \Te\Server('tcp://127.0.0.1:12345');
+    // 由于用 : 拆分，所以把tcp后面的 // 拿掉
+    $server = new \Te\Server('stream:127.0.0.1:12345');
 
     $server->on("connect", function (\Te\Server $server, \Te\TcpConnection $connection) {
         echo "有客户端连接了\n";
@@ -17,10 +18,10 @@ try {
 
     // 注册事件
     $server->on("receive", function (\Te\Server $server, $msg, \Te\TcpConnection $connection) {
-        echo "recv from client: " . $msg . "\n";
+//        echo "接收到 " . (int)$connection->_sockfd . " 客户端的数据：" . $msg . "\n";
 
-        // 将响应改到这里
-        $connection->write2socket('i am server');
+        // 改为调用send
+        $connection->send('i am server');
     });
 
     // 关闭事件

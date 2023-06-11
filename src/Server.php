@@ -3,6 +3,7 @@
 namespace Te;
 
 use Exception;
+use Te\Protocols\Stream;
 
 class Server
 {
@@ -11,6 +12,29 @@ class Server
     static public $_connections = [];  // 存放连接socket
 
     public $_events = [];
+
+    // 服务端拆包和封包
+    // 可能存在没有应用层协议，所以给个默认值null
+    public $_protocol = null;
+
+    // 存储应用层协议
+    public $_protocol_layout;
+    // 存储所有应用层协议
+    public $_protocols = [
+        "stream" => 'Te\Protocols\Stream',
+        'text' => '',
+        'ws' => '',
+        'http' => '',
+        'mqtt' => ''
+    ];
+
+    // 1. 定义类成员
+    static public $_clientNum = 0;  // 统计客户端连接数量
+    static public $_recvNum = 0;  // 执行recv/fread调用次数
+    static public $_msgNum = 0;  // 接收了多少条消息
+
+    // 9. 定义运行时间成员
+    public $_startTime = 0;
 
     // 回调函数
     public function on($eventName, $eventCall)
@@ -21,7 +45,64 @@ class Server
     // 变成活值，是传入tcp还是udp
     public function __construct($localSocket)
     {
-        $this->_localSocket = $localSocket;
+        // 由于我们入口函数时以 tcp://127.0.0.1:12345 格式传入，所以根据冒号获取不同协议名
+        [$protocol, $ip, $port] = explode(':', $localSocket);
+        if (in_array($protocol, array_keys($this->_protocols))) {
+            // 协议存在，初始化
+            $this->_protocol = new $this->_protocols[$protocol]();
+        }
+
+        // 10. 启动时初始化运行时间（这里是在入口文件开头就执行了）
+        $this->_startTime = time();
+
+        $this->_localSocket = 'tcp://' . $ip . ':' . $port;
+    }
+
+    // 2. 处理客户端连接
+    public function onClientJoin()
+    {
+        ++static::$_clientNum;
+    }
+
+    // 客户端断开，移除监听套接字
+    public function onClientLeave($sockfd)
+    {
+        if (isset(static::$_connections[(int)$sockfd])) {
+            unset(static::$_connections[(int)$sockfd]);
+        }
+
+        // 3. 处理客户端断开
+        --static::$_clientNum;
+    }
+
+    // 4.
+    public function onRecv()
+    {
+        ++static::$_recvNum;
+    }
+
+    // 5.
+    public function onMsg()
+    {
+        ++static::$_msgNum;
+    }
+
+    // 11. 统计
+    public function statistic()
+    {
+        $nowTime = time();
+        $diffTime = $nowTime - $this->_startTime;
+        $this->_startTime = $nowTime;  // 更新时间
+
+        // 超过1秒就统计
+        if ($diffTime >= 1) {
+            echo "time: " . $diffTime . 'socket: ' . (int)$this->_mainSocket . 'clientNum: ' . static::$_clientNum .
+                'recvNum: ' . static::$_recvNum . 'msgNum: ' . static::$_msgNum . "\n";
+
+            // 连接数是会发生变化的，在客户端连接和断开的时候，但是消息数不会清零，所以要手动处理
+            static::$_recvNum = 0;
+            static::$_msgNum = 0;
+        }
     }
 
     public function BindAndListen()
@@ -54,10 +135,12 @@ class Server
         while (1) {
             // 由于是监听套接字，我们只监听读事件
             // 走到这里证明while循环了一次，需要重新放入需要监听的套接字
-            $readFds = [];  // 这里初始化，否则会有bug
-            $readFds[] = $this->_mainSocket;
+            $readFds = [$this->_mainSocket];
             $writeFds = [];
             $expFds = [];
+
+            // 12. 在这里循环统计
+            $this->statistic();
 
             // 当我们在下面accept连接之后，就有了一个主动套接字，我们也要用select来监听这个主动套接字的数据收发事件
             if (!empty(static::$_connections)) {
@@ -93,14 +176,6 @@ class Server
         }
     }
 
-    // 客户端断开，移除监听套接字
-    public function onClientLeave($sockfd)
-    {
-        if (isset(static::$_connections[(int)$sockfd])) {
-            unset(static::$_connections[(int)$sockfd]);
-        }
-    }
-
     // 改函数参数（调用地方都要改到）
     public function runEventCallBack($eventName, $args = [])
     {
@@ -119,13 +194,15 @@ class Server
             throw new Exception("server accept fail\n");
         }
 
+        // 6. 客户端连接数增加
+        $this->onClientJoin();
+
         // new 封装的类，将套接字和端口传进去，并将返回值存入成员变量。
         // 传入 $server
         $connection = new TcpConnection($connfd, $peerName, $this);
         // 注意，因为此时存入的是类了，不是之前的套接字了，所以需要改上面循环这个数组的代码
         static::$_connections[(int)$connfd] = $connection;
 
-        // 将这里拆分出一个方法
         $this->runEventCallBack('connect', [$connection]);
     }
 }
