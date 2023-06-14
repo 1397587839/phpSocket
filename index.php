@@ -18,15 +18,21 @@ try {
 
     // 注册事件
     $server->on("receive", function (\Te\Server $server, $msg, \Te\TcpConnection $connection) {
+        // 屏蔽打印，便于观察统计数
 //        echo "接收到 " . (int)$connection->_sockfd . " 客户端的数据：" . $msg . "\n";
 
-        // 改为调用send
-        $connection->send('i am server');
+        // 7. 服务端关闭响应
+        // $connection->send('i am server');
     });
 
     // 关闭事件
     $server->on("close", function (\Te\Server $server, $msg, \Te\TcpConnection $connection) {
         echo "客户端断开连接了" . "\n";
+    });
+
+    // 3. 缓冲区满的事件
+    $server->on("receiveBufferFull", function (\Te\Server $server, \Te\TcpConnection $connection) {
+        echo "接收缓冲区满了" . "\n";
     });
 
     // 简化入口文件代码，将listen和event代码放入service的方法中

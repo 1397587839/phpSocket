@@ -28,12 +28,12 @@ class Server
         'mqtt' => ''
     ];
 
-    // 1. 定义类成员
+    // 定义类成员
     static public $_clientNum = 0;  // 统计客户端连接数量
     static public $_recvNum = 0;  // 执行recv/fread调用次数
     static public $_msgNum = 0;  // 接收了多少条消息
 
-    // 9. 定义运行时间成员
+    // 定义运行时间成员
     public $_startTime = 0;
 
     // 回调函数
@@ -52,13 +52,13 @@ class Server
             $this->_protocol = new $this->_protocols[$protocol]();
         }
 
-        // 10. 启动时初始化运行时间（这里是在入口文件开头就执行了）
+        // 启动时初始化运行时间（这里是在入口文件开头就执行了）
         $this->_startTime = time();
 
         $this->_localSocket = 'tcp://' . $ip . ':' . $port;
     }
 
-    // 2. 处理客户端连接
+    // 处理客户端连接
     public function onClientJoin()
     {
         ++static::$_clientNum;
@@ -71,23 +71,23 @@ class Server
             unset(static::$_connections[(int)$sockfd]);
         }
 
-        // 3. 处理客户端断开
+        // 处理客户端断开
         --static::$_clientNum;
     }
 
-    // 4.
+    // 
     public function onRecv()
     {
         ++static::$_recvNum;
     }
 
-    // 5.
+    // 
     public function onMsg()
     {
         ++static::$_msgNum;
     }
 
-    // 11. 统计
+    // 统计
     public function statistic()
     {
         $nowTime = time();
@@ -96,8 +96,8 @@ class Server
 
         // 超过1秒就统计
         if ($diffTime >= 1) {
-            echo "time: " . $diffTime . 'socket: ' . (int)$this->_mainSocket . 'clientNum: ' . static::$_clientNum .
-                'recvNum: ' . static::$_recvNum . 'msgNum: ' . static::$_msgNum . "\n";
+            echo "time: " . $diffTime . ' socket: ' . (int)$this->_mainSocket . ' clientNum: ' . static::$_clientNum .
+                ' recvNum: ' . static::$_recvNum . ' msgNum: ' . static::$_msgNum . "\n";
 
             // 连接数是会发生变化的，在客户端连接和断开的时候，但是消息数不会清零，所以要手动处理
             static::$_recvNum = 0;
@@ -107,7 +107,7 @@ class Server
 
     public function BindAndListen()
     {
-        $option['socket']['backlog'] = 10;
+        $option['socket']['backlog'] = 1024;
         $context = stream_context_create($option);  // 内部是使用setsockopt这个函数
 
         $flag = STREAM_SERVER_LISTEN|STREAM_SERVER_BIND;
@@ -139,7 +139,7 @@ class Server
             $writeFds = [];
             $expFds = [];
 
-            // 12. 在这里循环统计
+            // 在这里循环统计
             $this->statistic();
 
             // 当我们在下面accept连接之后，就有了一个主动套接字，我们也要用select来监听这个主动套接字的数据收发事件
@@ -194,7 +194,7 @@ class Server
             throw new Exception("server accept fail\n");
         }
 
-        // 6. 客户端连接数增加
+        // 客户端连接数增加
         $this->onClientJoin();
 
         // new 封装的类，将套接字和端口传进去，并将返回值存入成员变量。

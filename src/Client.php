@@ -56,7 +56,7 @@ class Client
             $this->runEventCallBack("connect", [$this]);
 
             // 连接成功开启事件循环
-            $this->EventLoop();
+//            $this->EventLoop();
         } else {
             // 连接失败，调用失败回调
             $this->runEventCallBack("error", [$this, $errno, $errstr]);
@@ -66,7 +66,8 @@ class Client
     // event事件循环（select I/O）收发消息
     public function EventLoop()
     {
-        while (1) {
+//        while (1) {
+        if (is_resource($this->_mainSocket)) {
             $readFds = [$this->_mainSocket];
             $writeFds = [$this->_mainSocket];
             $exptFds = [$this->_mainSocket];
@@ -75,17 +76,21 @@ class Client
 
             if ($ret <= 0 || $ret === false) {
                 echo "事件循环出错\n";
-                break;
+//                break;
+                return false;
             }
 
             if ($readFds) {
                 // 有可读数据了，封装recv方法接收数据
                 $this->recv4socket();
             }
+            return true;
+        } else {
+            return false;
         }
     }
 
-    // 15（没有16 直接看17）. 实现关闭方法
+    //  实现关闭方法
     public function onClose()
     {
         // 关闭连接，执行事件回调
@@ -143,6 +148,7 @@ class Client
         $bin = $this->_protocol->Encode($data);
 
         $writeLen = fwrite($this->_mainSocket, $bin[1], $bin[0]);
-        echo "我写了" . $writeLen . "字节\n";
+        // 8(最终). 关闭发送打印
+//         echo "我写了" . $writeLen . "字节\n";
     }
 }

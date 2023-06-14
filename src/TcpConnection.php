@@ -55,7 +55,7 @@ class TcpConnection
                 $this->_recvBuffer .= $data;
                 $this->_recvLen += strlen($data);
 
-                // 7. 接收消息数增加
+                // 接收消息数增加
                 /** @var Server $server */
                 $server = $this->_server;
                 $server->onRecv();
@@ -92,7 +92,7 @@ class TcpConnection
                 // 拆包成功后除了数据要从缓冲区截取后，recvLen也要减少对应长度
                 $this->_recvLen -= $msgLen;
 
-                // 8. 接收消息增加
+                // 接收消息增加
                 $server->onMsg();
 
                 // 解包，获取最终的消息
@@ -148,6 +148,8 @@ class TcpConnection
 
         } else {
             $this->_sendBufferFull++;
+            // 4. 回调
+            $server->runEventCallBack('receiveBufferFull', [$this]);
         }
 
         // fwrite在发送数据的时候会存在以下几种情况：
