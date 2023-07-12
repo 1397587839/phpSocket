@@ -20,6 +20,12 @@ class Client
 
     public $_localSocket;
 
+    // 4. 发送缓冲区
+    public $_sendLen = 0;
+    public $_sendBuffer = '';
+    public $_sendBufferSize = 1024 * 1000;  // 100兆
+    public $_sendBufferFull = 0;  // 发送满了的次数
+
     public function __construct($localSocket)
     {
         // 初始化
@@ -69,7 +75,12 @@ class Client
 //        while (1) {
         if (is_resource($this->_mainSocket)) {
             $readFds = [$this->_mainSocket];
-            $writeFds = [$this->_mainSocket];
+            // 6. 判断当需要发送数据时，才监听发送
+            $writeFds = [];
+            if ($this->isNeedSend()) {
+                $writeFds = [$this->_mainSocket];
+            }
+
             $exptFds = [$this->_mainSocket];
 
             $ret = stream_select($readFds, $writeFds, $exptFds, NULL, NULL);
@@ -84,6 +95,13 @@ class Client
                 // 有可读数据了，封装recv方法接收数据
                 $this->recv4socket();
             }
+
+            // 1. 开启可写捕捉
+            if ($writeFds) {
+                // 2. 封装send方法（使用发送缓冲区发送数据）
+                $this->write2socket();
+            }
+
             return true;
         } else {
             return false;
@@ -141,14 +159,58 @@ class Client
         }
     }
 
-    // 封装写数据
-    public function write2socket($data)
+    // 3. 封装实现了缓冲区的发送数据
+    public function send($data)
     {
-        // 调用打包方法
-        $bin = $this->_protocol->Encode($data);
+        $len = strlen($data);
+        if ($this->_sendLen + $len < $this->_sendBufferSize) {
 
-        $writeLen = fwrite($this->_mainSocket, $bin[1], $bin[0]);
-        // 8(最终). 关闭发送打印
+            // 5. 并不是直接发送数据，而是先将数据放到发送缓冲区里
+            $bin = $this->_protocol->Encode($data);
+            $this->_sendBuffer .= $bin[1];
+            $this->_sendLen += $bin[0];
+
+        } else {
+            $this->_sendBufferFull++;
+            // 发送缓冲区满的回调
+            $this->runEventCallBack('receiveBufferFull', [$this]);
+        }
+    }
+
+    /**
+     * 根据发送缓冲区判断是否需要发送数据
+     * @return bool
+     */
+    public function isNeedSend(): bool
+    {
+        return $this->_sendLen > 0;
+    }
+
+    // 7. 修改发送数据接口，不需要打包了，因为send已经打包完了，直接从发送缓冲区取数据发送
+    public function write2socket()
+    {
+        if ($this->isNeedSend()) {
+            $writeLen = fwrite($this->_mainSocket, $this->_sendBuffer, $this->_sendLen);
+            // 关闭发送打印
 //         echo "我写了" . $writeLen . "字节\n";
+
+            // fwrite在发送数据的时候会存在以下几种情况：
+            if ($writeLen == $this->_sendLen) {
+                // 第一种情况：完整发送；
+                // 发送成功后，也要将 发送缓冲区 和 发送字节数 清空
+                $this->_sendBuffer = '';
+                $this->_sendLen -= $writeLen;
+                return true;
+            } else if ($writeLen > 0) {
+                // 第二种情况：只发送一半
+                // 只是做了简单的处理，减掉了对应长度的缓冲区和发送的字节
+                $this->_sendBuffer = substr($this->_sendBuffer, $writeLen);
+                $this->_sendLen -= $writeLen;
+                // 并没有将后面的继续发送，后面会讲代码进行完善
+            } else {
+                // 第三种情况：对端关闭
+                $this->onClose();
+            }
+        }
     }
 }

@@ -148,7 +148,7 @@ class TcpConnection
 
         } else {
             $this->_sendBufferFull++;
-            // 4. 回调
+            // 回调
             $server->runEventCallBack('receiveBufferFull', [$this]);
         }
 

@@ -2,11 +2,11 @@
 
 require_once "vendor/autoload.php";
 
-// 1. 命令行参数，接收创建进程的个数
+// 命令行参数，接收创建进程的个数
 $clientNum = $argv[1];
 $clients = [];
 
-// 2. 将创建好的对象放到数组里
+// 将创建好的对象放到数组里
 for ($i=0;$i<$clientNum;$i++) {
     // 调用客户端
     $client = new \Te\Client('tcp://127.0.0.1:12345');
@@ -43,18 +43,19 @@ for ($i=0;$i<$clientNum;$i++) {
     $client->Start();
 }
 
-// 5. 子进程一直发送
+// 子进程一直发送
 $pid = pcntl_fork();
 
 if ($pid == 0) {
     while (1) {
         foreach ($clients as $client) {
-            $client->write2socket('i am client');
+            // 8. 这里改为调用send
+            $client->send('i am client');
         }
     }
 }
 
-// 6. 父进程接收
+// 父进程接收
 while (1) {
     foreach ($clients as $client) {
         if (!$client->EventLoop()) {

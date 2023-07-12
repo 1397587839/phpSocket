@@ -21,7 +21,7 @@ try {
         // 屏蔽打印，便于观察统计数
 //        echo "接收到 " . (int)$connection->_sockfd . " 客户端的数据：" . $msg . "\n";
 
-        // 7. 服务端关闭响应
+        // 服务端关闭响应
         // $connection->send('i am server');
     });
 
@@ -30,7 +30,7 @@ try {
         echo "客户端断开连接了" . "\n";
     });
 
-    // 3. 缓冲区满的事件
+    // 缓冲区满的事件
     $server->on("receiveBufferFull", function (\Te\Server $server, \Te\TcpConnection $connection) {
         echo "接收缓冲区满了" . "\n";
     });
